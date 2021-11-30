@@ -4,7 +4,7 @@
 # ipcamera: g++ -g -o ipcamera -Wall -DWITH_OPENSSL -DWITH_DOM -DWITH_ZLIB \
 #   -I. -I ~/gsoap-2.8/gsoap/plugin -I ~/gsoap-2.8/gsoap/custom -I ~/gsoap-2.8/gsoap \
 #   src/test_ptz.cpp \
-#   lib/onvifClient.cpp \
+#   lib/onvifApi.cpp \
 #   lib/soapC.cpp \
 #   lib/wsddClient.cpp \
 #   lib/wsddServer.cpp \
@@ -66,7 +66,7 @@ LIBS = -lcrypto -lssl -lz -ljsoncpp -lpthread -std=c++11
 # with the .o suffix
 
 # OBJS = src/test_ptz.cpp
-# OBJS += lib/onvifClient.o
+# OBJS += lib/onvifApi.o
 # OBJS += lib/soapC.o
 # OBJS += lib/wsddClient.o
 # OBJS += lib/wsddServer.o
@@ -89,6 +89,7 @@ LIBS = -lcrypto -lssl -lz -ljsoncpp -lpthread -std=c++11
 
 OBJS = src/test_ptz.cpp
 OBJS += lib/onvifClient.o
+OBJS += lib/onvifApi.o
 OBJS += lib/soapC.o
 OBJS += lib/wsddClient.o
 OBJS += lib/wsddServer.o
@@ -108,6 +109,7 @@ OBJS += lib/wsaapi.o
 OBJS += lib/wsseapi.o
 OBJS += lib/wsddapi.o
 OBJS += lib/struct_timeval.o
+# OBJS += include/httplib.h
 
 
 # define the executable file 
@@ -132,8 +134,8 @@ $(MAIN): $(OBJS)
 test_ptz.o: test_ptz.cpp 
 	$(CC) $(CFLAGS) $(INCLUDES) -c test_ptz.cpp
 
-# onvifClient.o: onvifClient.cpp onvifClient.h
-# 	$(CC) $(CFLAGS) -c onvifClient.cpp
+# onvifApi.o: onvifApi.cpp onvifApi.h
+# 	$(CC) $(CFLAGS) -c onvifApi.cpp
 
 # soapC.o: soapC.cpp soapH.h
 # 	$(CC) $(CFLAGS) -c soapC.cpp

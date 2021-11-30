@@ -1,77 +1,224 @@
 #include "lib/onvifClient.h"
+#include "include/httplib.h"
+#include <jsoncpp/json/json.h>
 
+void say_hello(const httplib::Request &, httplib::Response &res);
+void tds_LoginCamera(const httplib::Request &req, httplib::Response &res, const httplib::ContentReader &content_reader);
+void tptz_ContinuousMove(const httplib::Request &req, httplib::Response &res, const httplib::ContentReader &content_reader);
+void tptz_Stop(const httplib::Request &req, httplib::Response &res, const httplib::ContentReader &content_reader);
 
-int main()
+struct soap *soap = soap_new1(SOAP_XML_STRICT | SOAP_XML_CANONICAL);
+std::vector<onvifClient> ptzTest;
+
+int main(int argc, char **argv)
 {
     std::cout << "Start!!!" << std::endl;
     // create a context with strict XML validation and exclusive XML canonicalization for WS-Security enabled
-    struct soap *soap = soap_new1(SOAP_XML_STRICT | SOAP_XML_CANONICAL);
     soap->connect_timeout = soap->recv_timeout = soap->send_timeout = 10; // 10 sec
-    std::string ip = "192.168.51.150";
-    int port = 80;
-    std::string username = "admin";
-    std::string password = "elcom_123";
-    onvifClient ptzOnvif(soap, ip, port, username, password);
+	soap->bind_flags |= SO_REUSEADDR;	// immediate port reuse when binding
 
-    _tds__GetDeviceInformation tds__GetDeviceInformation;
-	_tds__GetDeviceInformationResponse tds__GetDeviceInformationResponse;
-
-	ptzOnvif.tdsGetDeviceInformation(&tds__GetDeviceInformation, tds__GetDeviceInformationResponse);
-    
-	std::cout << tds__GetDeviceInformationResponse.HardwareId << std::endl;
-	std::cout << tds__GetDeviceInformationResponse.Manufacturer << std::endl;
-	std::cout << tds__GetDeviceInformationResponse.SerialNumber << std::endl;
 	
+
+
+	// HTTP
+	httplib::Server svr;
+	svr.Get("/", say_hello);
+	svr.Post("/onvif/v1.0/tds_LoginCamera", tds_LoginCamera);
+	svr.Post("/onvif/v1.0/tptz_ContinuousMove", tptz_ContinuousMove);
+	svr.Post("/onvif/v1.0/tptz_Stop", tptz_Stop);
+	std::cout << "http server start!!!" << std::endl;
+	svr.listen("0.0.0.0", 8080);
+
 	return 0;
 }
 
-
-/******************************************************************************\
- *
- *	WS-Discovery event handlers must be defined, even when not used
- *
-\******************************************************************************/
-
-void wsdd_event_Hello(struct soap *soap, unsigned int InstanceId, const char *SequenceId, unsigned int MessageNumber, const char *MessageID, const char *RelatesTo, const char *EndpointReference, const char *Types, const char *Scopes, const char *MatchBy, const char *XAddrs, unsigned int MetadataVersion)
-{ }
-
-void wsdd_event_Bye(struct soap *soap, unsigned int InstanceId, const char *SequenceId, unsigned int MessageNumber, const char *MessageID, const char *RelatesTo, const char *EndpointReference, const char *Types, const char *Scopes, const char *MatchBy, const char *XAddrs, unsigned int *MetadataVersion)
-{ }
-
-soap_wsdd_mode wsdd_event_Probe(struct soap *soap, const char *MessageID, const char *ReplyTo, const char *Types, const char *Scopes, const char *MatchBy, struct wsdd__ProbeMatchesType *ProbeMatches)
+void say_hello(const httplib::Request &, httplib::Response &res)
 {
-  	return SOAP_WSDD_ADHOC;
+	res.set_content("Hello World!", "text/plain");
 }
 
-void wsdd_event_ProbeMatches(struct soap *soap, unsigned int InstanceId, const char *SequenceId, unsigned int MessageNumber, const char *MessageID, const char *RelatesTo, struct wsdd__ProbeMatchesType *ProbeMatches)
-{ }
-
-soap_wsdd_mode wsdd_event_Resolve(struct soap *soap, const char *MessageID, const char *ReplyTo, const char *EndpointReference, struct wsdd__ResolveMatchType *match)
+void tds_LoginCamera(const httplib::Request &req, httplib::Response &res, const httplib::ContentReader &content_reader)
 {
-  	return SOAP_WSDD_ADHOC;
+	std::string body;
+	if (req.is_multipart_form_data()) {
+		// NOTE: `content_reader` is blocking until every form data field is read
+		httplib::MultipartFormDataItems files;
+		content_reader(
+			[&](const httplib::MultipartFormData &file) {
+				files.push_back(file);
+				return true;
+			},
+			[&](const char *data, size_t data_length) {
+				files.back().content.append(data, data_length);
+				return true;
+			});
+    } else {
+		// std::string body;
+		content_reader([&](const char *data, size_t data_length) {
+			body.append(data, data_length);
+			return true;
+		});
+		// std::cout << body << std::endl;
+    }
+
+	Json::Value root_dataResponse;
+    Json::Reader reader;
+	reader.parse(body, root_dataResponse);
+
+	std::string ip;
+	int port;
+	std::string username;
+	std::string password;
+	if(!root_dataResponse["ip"].isNull())
+	{
+		ip = root_dataResponse["ip"].asString();
+	}
+	if(!root_dataResponse["port"].isNull())
+	{
+		port = root_dataResponse["port"].asInt();
+	}
+	if(!root_dataResponse["username"].isNull())
+	{
+		username = root_dataResponse["username"].asString();
+	}
+	if(!root_dataResponse["password"].isNull())
+	{
+		password = root_dataResponse["password"].asString();
+	}
+	ptzTest.push_back(onvifClient(soap, ip, port, username, password));
+	// onvifClient ptzTest(soap, ip, port, username, password);
+	struct cus_onvif_Identification IdentificationResponse;
+	ptzTest.back().cusGetIdentification(IdentificationResponse);
+	std::cout << "Name: " << IdentificationResponse.Name << std::endl;
+	std::cout << "ProfileToken: " << ptzTest.back().onvifClientApi->profile_token.back() << std::endl;
+
+	std::string profileToken = "{\"ProfileToken\":\"";
+	profileToken += ptzTest.back().onvifClientApi->profile_token.back();
+	profileToken += "\"}";
+	res.set_content(profileToken, "text/plain");
 }
 
-void wsdd_event_ResolveMatches(struct soap *soap, unsigned int InstanceId, const char * SequenceId, unsigned int MessageNumber, const char *MessageID, const char *RelatesTo, struct wsdd__ResolveMatchType *match)
-{ }
-
-int SOAP_ENV__Fault(struct soap *soap, char *faultcode, char *faultstring, char *faultactor, struct SOAP_ENV__Detail *detail, struct SOAP_ENV__Code *SOAP_ENV__Code, struct SOAP_ENV__Reason *SOAP_ENV__Reason, char *SOAP_ENV__Node, char *SOAP_ENV__Role, struct SOAP_ENV__Detail *SOAP_ENV__Detail)
+void tptz_ContinuousMove(const httplib::Request &req, httplib::Response &res, const httplib::ContentReader &content_reader)
 {
-	// populate the fault struct from the operation arguments to print it
-	soap_fault(soap);
-	// SOAP 1.1
-	soap->fault->faultcode = faultcode;
-	soap->fault->faultstring = faultstring;
-	soap->fault->faultactor = faultactor;
-	soap->fault->detail = detail;
-	// SOAP 1.2
-	soap->fault->SOAP_ENV__Code = SOAP_ENV__Code;
-	soap->fault->SOAP_ENV__Reason = SOAP_ENV__Reason;
-	soap->fault->SOAP_ENV__Node = SOAP_ENV__Node;
-	soap->fault->SOAP_ENV__Role = SOAP_ENV__Role;
-	soap->fault->SOAP_ENV__Detail = SOAP_ENV__Detail;
-	// set error
-	soap->error = SOAP_FAULT;
-	// handle or display the fault here with soap_stream_fault(soap, std::cerr);
-	// return HTTP 202 Accepted
-	return soap_send_empty_response(soap, SOAP_OK);
+	std::string body;
+	if (req.is_multipart_form_data()) {
+		// NOTE: `content_reader` is blocking until every form data field is read
+		httplib::MultipartFormDataItems files;
+		content_reader(
+			[&](const httplib::MultipartFormData &file) {
+				files.push_back(file);
+				return true;
+			},
+			[&](const char *data, size_t data_length) {
+				files.back().content.append(data, data_length);
+				return true;
+			});
+    } else {
+		// std::string body;
+		content_reader([&](const char *data, size_t data_length) {
+			body.append(data, data_length);
+			return true;
+		});
+		// std::cout << body << std::endl;
+    }
+	struct cus_onvif_tptz_ContinuousMove tptz_ContinuousMove;
+	Json::Value root_dataResponse;
+    Json::Reader reader;
+	reader.parse(body, root_dataResponse);
+	int count_camera;
+	if(!root_dataResponse["ProfileToken"].isNull())
+	{	
+		std::string ProfileToken = root_dataResponse["ProfileToken"].asString();
+		for(unsigned int i = 0; i < ptzTest.size(); i++)
+		{
+			if(ProfileToken == ptzTest[i].onvifClientApi->profile_token.back())
+			{
+				count_camera = i;
+				break;
+			}
+		}
+		tptz_ContinuousMove.ProfileToken = ProfileToken;
+	}
+	tptz_ContinuousMove.Velocity = new struct cus_onvif_tptz_PTZSpeed();
+	if(!root_dataResponse["PanTilt"].isNull())
+	{	
+		tptz_ContinuousMove.Velocity->PanTilt = new struct cus_onvif_tptz_Vector2D();
+		tptz_ContinuousMove.Velocity->PanTilt->x = root_dataResponse["PanTilt"]["x"].asFloat();
+		tptz_ContinuousMove.Velocity->PanTilt->y = root_dataResponse["PanTilt"]["y"].asFloat();
+		std::cout << "PanTilt x: " << tptz_ContinuousMove.Velocity->PanTilt->x << std::endl;
+		std::cout << "PanTilt y: " << tptz_ContinuousMove.Velocity->PanTilt->y << std::endl;
+	}
+	if(!root_dataResponse["Zoom"].isNull())
+	{
+		tptz_ContinuousMove.Velocity->Zoom = new struct cus_onvif_tptz_Vector1D();
+		tptz_ContinuousMove.Velocity->Zoom->x = root_dataResponse["Zoom"]["x"].asFloat();
+		std::cout << "Zoom x: " << tptz_ContinuousMove.Velocity->Zoom->x << std::endl;
+	}
+
+	ptzTest[count_camera].cusTptzContinuousMove(&tptz_ContinuousMove);
+	res.set_content("{\"status\":\"ok\"}", "text/plain");
 }
+
+void tptz_Stop(const httplib::Request &req, httplib::Response &res, const httplib::ContentReader &content_reader)
+{
+	// _tptz__Stop tptz__Stop;
+	// _tptz__StopResponse tptz__StopResponse;
+
+	std::string body;
+	if (req.is_multipart_form_data()) {
+		// NOTE: `content_reader` is blocking until every form data field is read
+		httplib::MultipartFormDataItems files;
+		content_reader(
+			[&](const httplib::MultipartFormData &file) {
+				files.push_back(file);
+				return true;
+			},
+			[&](const char *data, size_t data_length) {
+				files.back().content.append(data, data_length);
+				return true;
+			});
+    } else {
+		// std::string body;
+		content_reader([&](const char *data, size_t data_length) {
+			body.append(data, data_length);
+			return true;
+		});
+		std::cout << body << std::endl;
+    }
+	struct cus_onvif_tptz_Stop tptz_Stop;
+	Json::Value root_dataResponse;
+    Json::Reader reader;
+	reader.parse(body, root_dataResponse);
+	int count_camera;
+	if(!root_dataResponse["ProfileToken"].isNull())
+	{	
+		std::string ProfileToken = root_dataResponse["ProfileToken"].asString();
+		for(unsigned int i = 0; i < ptzTest.size(); i++)
+		{
+			if(ProfileToken == ptzTest[i].onvifClientApi->profile_token.back())
+			{
+				count_camera = i;
+				break;
+			}
+		}
+		tptz_Stop.ProfileToken = ProfileToken;
+	}
+	if(!root_dataResponse["PanTilt"].isNull())
+	{
+		bool *PanTilt = new bool(root_dataResponse["PanTilt"].asBool());
+		tptz_Stop.PanTilt = PanTilt;
+	}
+
+	if(!root_dataResponse["Zoom"].isNull())
+	{
+		bool *Zoom = new bool(root_dataResponse["Zoom"].asBool());
+		tptz_Stop.Zoom = Zoom;
+	}
+
+	ptzTest[count_camera].cusTptzStop(&tptz_Stop);
+	res.set_content("{\"status\":\"ok\"}", "text/plain");
+}
+
+
+
+

@@ -4,6 +4,7 @@
 ### C++ ###
 # Prerequisites
 *.d
+test_ptz
 
 # Compiled Object files
 *.slo
