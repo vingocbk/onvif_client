@@ -58,7 +58,7 @@ void tds_LoginCamera(const httplib::Request &req, httplib::Response &res, const 
 			body.append(data, data_length);
 			return true;
 		});
-		// std::cout << body << std::endl;
+		std::cout << body << std::endl;
     }
 
 	Json::Value root_dataResponse;
@@ -95,6 +95,7 @@ void tds_LoginCamera(const httplib::Request &req, httplib::Response &res, const 
 	std::string profileToken = "{\"ProfileToken\":\"";
 	profileToken += ptzTest.back().onvifClientApi->profile_token.back();
 	profileToken += "\"}";
+	std::cout << profileToken << std::endl;
 	res.set_content(profileToken, "text/plain");
 }
 
@@ -119,7 +120,7 @@ void tptz_ContinuousMove(const httplib::Request &req, httplib::Response &res, co
 			body.append(data, data_length);
 			return true;
 		});
-		// std::cout << body << std::endl;
+		std::cout << body << std::endl;
     }
 	struct cus_onvif_tptz_ContinuousMove tptz_ContinuousMove;
 	Json::Value root_dataResponse;
@@ -145,14 +146,14 @@ void tptz_ContinuousMove(const httplib::Request &req, httplib::Response &res, co
 		tptz_ContinuousMove.Velocity->PanTilt = new struct cus_onvif_tptz_Vector2D();
 		tptz_ContinuousMove.Velocity->PanTilt->x = root_dataResponse["PanTilt"]["x"].asFloat();
 		tptz_ContinuousMove.Velocity->PanTilt->y = root_dataResponse["PanTilt"]["y"].asFloat();
-		std::cout << "PanTilt x: " << tptz_ContinuousMove.Velocity->PanTilt->x << std::endl;
-		std::cout << "PanTilt y: " << tptz_ContinuousMove.Velocity->PanTilt->y << std::endl;
+		// std::cout << "PanTilt x: " << tptz_ContinuousMove.Velocity->PanTilt->x << std::endl;
+		// std::cout << "PanTilt y: " << tptz_ContinuousMove.Velocity->PanTilt->y << std::endl;
 	}
 	if(!root_dataResponse["Zoom"].isNull())
 	{
 		tptz_ContinuousMove.Velocity->Zoom = new struct cus_onvif_tptz_Vector1D();
 		tptz_ContinuousMove.Velocity->Zoom->x = root_dataResponse["Zoom"]["x"].asFloat();
-		std::cout << "Zoom x: " << tptz_ContinuousMove.Velocity->Zoom->x << std::endl;
+		// std::cout << "Zoom x: " << tptz_ContinuousMove.Velocity->Zoom->x << std::endl;
 	}
 
 	ptzTest[count_camera].cusTptzContinuousMove(&tptz_ContinuousMove);
@@ -219,6 +220,6 @@ void tptz_Stop(const httplib::Request &req, httplib::Response &res, const httpli
 	res.set_content("{\"status\":\"ok\"}", "text/plain");
 }
 
-
+//rsync -arvz /home/ngoc/Documents/onvif_discovery --exclude={'onvifserver','*.o','.git/*'} -e 'ssh -p 9022' xavier-nx@113.20.107.196:/media/ngocnv_ws
 
 

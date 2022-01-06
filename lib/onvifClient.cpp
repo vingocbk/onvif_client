@@ -125,8 +125,8 @@ void onvifClient::cusTptzStop(struct cus_onvif_tptz_Stop *onvif_tptz_Stop)
     _tptz__Stop tptz__Stop;
     _tptz__StopResponse tptz__StopResponse;
     tptz__Stop.ProfileToken = onvif_tptz_Stop->ProfileToken;
-    tptz__Stop.PanTilt = new bool(onvif_tptz_Stop->PanTilt);
-    tptz__Stop.Zoom = new bool(onvif_tptz_Stop->Zoom);
+    tptz__Stop.PanTilt = onvif_tptz_Stop->PanTilt;
+    tptz__Stop.Zoom = onvif_tptz_Stop->Zoom;
     onvifClientApi->tptzStop(&tptz__Stop, tptz__StopResponse);
 
 }
