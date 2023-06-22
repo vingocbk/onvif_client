@@ -1,0 +1,1 @@
+/usr/bin/c++  -DWITH_OPENSSL -Wall -g -DWITH_DOM -DWITH_ZLIB -I. -lcrypto -lssl -lz -ljsoncpp -lpthread -std=c++11 CMakeFiles/app.dir/src/main.cpp.o CMakeFiles/app.dir/libOnvif/stdsoap2.cpp.o -o app  -lcrypto -lssl -lz -ljsoncpp -lpthread libOnvif/libonvif.a 

@@ -1,0 +1,6 @@
+/home/ngoc/Documents/C++/Onvif_Client/build/CMakeFiles/app.dir
+/home/ngoc/Documents/C++/Onvif_Client/build/CMakeFiles/edit_cache.dir
+/home/ngoc/Documents/C++/Onvif_Client/build/CMakeFiles/rebuild_cache.dir
+/home/ngoc/Documents/C++/Onvif_Client/build/libOnvif/CMakeFiles/onvif.dir
+/home/ngoc/Documents/C++/Onvif_Client/build/libOnvif/CMakeFiles/edit_cache.dir
+/home/ngoc/Documents/C++/Onvif_Client/build/libOnvif/CMakeFiles/rebuild_cache.dir
